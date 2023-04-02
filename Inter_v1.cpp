@@ -84,11 +84,11 @@ TreeNode* buildTree(string expression) {
     return operands.top();
 }
 
-int evaluate(TreeNode* root) {
+int evaluate_tree(TreeNode* root) {
     if (!root) return 0;
     if (!root->left && !root->right) return root->val - '0';
-    int left = evaluate(root->left);
-    int right = evaluate(root->right);
+    int left = evaluate_tree(root->left);
+    int right = evaluate_tree(root->right);
     if (root->val == '+') return left + right;
     if (root->val == '-') return left - right;
     if (root->val == '*') return left * right;
@@ -449,7 +449,7 @@ int main() {
             str.erase(remove(str.begin(), str.end(), ' '), str.end());
             string var = str.substr(0, str.find('='));
             string expression = str.substr(str.find('=') + 1);
-            int result = evaluate(buildTree(expression));
+            int result = evaluate_tree(buildTree(expression));
             cout << "buildTree: " << result << endl;
             variable_map[var] = to_string(evaluate(expression));
         }
