@@ -9,6 +9,92 @@
 
 using namespace std;
 
+bool isOperator(char c) {
+    return (c == '+' || c == '-' || c == '*' || c == '/');
+}
+
+//определение приоритета
+int precedence(char op) {
+    if (op == '+' || op == '-')
+        return 1;
+    if (op == '*' || op == '/')
+        return 2;
+    return 0;
+}
+
+struct TreeNode {
+    char val;
+    TreeNode* left, * right;
+    TreeNode(char x) : val(x), left(NULL), right(NULL) {}
+};
+
+TreeNode* buildTree(string expression) {
+    stack<TreeNode*> operands;
+    stack<char> operators;
+
+    for (int i = 0; i < expression.length(); i++) {
+        if (expression[i] == '(') {
+            operators.push(expression[i]);
+        }
+        else if (isdigit(expression[i])) {
+            operands.push(new TreeNode(expression[i]));
+        }
+        else if (isOperator(expression[i])) {
+            while (!operators.empty() && precedence(operators.top()) >= precedence(expression[i])) {
+                TreeNode* op = new TreeNode(operators.top());
+                operators.pop();
+
+                op->right = operands.top();
+                operands.pop();
+                op->left = operands.top();
+                operands.pop();
+
+                operands.push(op);
+            }
+            operators.push(expression[i]);
+        }
+        else if (expression[i] == ')') {
+            while (!operators.empty() && operators.top() != '(') {
+                TreeNode* op = new TreeNode(operators.top());
+                operators.pop();
+
+                op->right = operands.top();
+                operands.pop();
+                op->left = operands.top();
+                operands.pop();
+
+                operands.push(op);
+            }
+            operators.pop();
+        }
+    }
+
+    while (!operators.empty()) {
+        TreeNode* op = new TreeNode(operators.top());
+        operators.pop();
+
+        op->right = operands.top();
+        operands.pop();
+        op->left = operands.top();
+        operands.pop();
+
+        operands.push(op);
+    }
+
+    return operands.top();
+}
+
+int evaluate(TreeNode* root) {
+    if (!root) return 0;
+    if (!root->left && !root->right) return root->val - '0';
+    int left = evaluate(root->left);
+    int right = evaluate(root->right);
+    if (root->val == '+') return left + right;
+    if (root->val == '-') return left - right;
+    if (root->val == '*') return left * right;
+    return left / right;
+}
+
 // Определение типа функтора для инструкций
 using Instruction = function<void(vector<string>)>;
 
@@ -31,15 +117,6 @@ int variableCheck(string token) {
         token = variable_map[token];
     }
     return stoi(token);
-}
-
-//определение приоритета
-int precedence(char op) {
-    if (op == '+' || op == '-')
-        return 1;
-    if (op == '*' || op == '/')
-        return 2;
-    return 0;
 }
 
 //вычисления операции
@@ -372,6 +449,8 @@ int main() {
             str.erase(remove(str.begin(), str.end(), ' '), str.end());
             string var = str.substr(0, str.find('='));
             string expression = str.substr(str.find('=') + 1);
+            int result = evaluate(buildTree(expression));
+            cout << "buildTree: " << result << endl;
             variable_map[var] = to_string(evaluate(expression));
         }
 
