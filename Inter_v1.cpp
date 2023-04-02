@@ -8,6 +8,15 @@
 #include <stack>
 
 using namespace std;
+map<string, string> variable_map;
+
+//функция для замены имени переменной на ее значение, если такая переменная существует
+int variableCheck(string token) {
+    if (variable_map.count(token)) {
+        token = variable_map[token];
+    }
+    return stoi(token);
+}
 
 bool isOperator(char c) {
     return (c == '+' || c == '-' || c == '*' || c == '/');
@@ -22,14 +31,15 @@ int precedence(char op) {
     return 0;
 }
 
-struct TreeNode {
-    char val;
-    TreeNode* left, * right;
-    TreeNode(char x) : val(x), left(NULL), right(NULL) {}
+struct Node {
+    string value;
+    Node* left;
+    Node* right;
+    Node(string x) : value(x), left(NULL), right(NULL) {}
 };
 
-TreeNode* buildTree(string expression) {
-    stack<TreeNode*> operands;
+Node* buildTree(string expression) {
+    stack<Node*> operands;
     stack<char> operators;
 
     for (int i = 0; i < expression.length(); i++) {
@@ -37,11 +47,29 @@ TreeNode* buildTree(string expression) {
             operators.push(expression[i]);
         }
         else if (isdigit(expression[i])) {
-            operands.push(new TreeNode(expression[i]));
+            int val = 0;
+            while (i < expression.length() && isdigit(expression[i])) {
+                val = (val * 10) + (expression[i] - '0');
+                i++;
+            }
+            i--;
+            operands.push(new Node(to_string(val)));
+        }
+        else if (isalpha(expression[i])) {
+            string var;
+            while (i < expression.length() && isalnum(expression[i])) {
+                var += expression[i];
+                i++;
+            }
+            i--;
+            operands.push(new Node(to_string(variableCheck(var))));
         }
         else if (isOperator(expression[i])) {
             while (!operators.empty() && precedence(operators.top()) >= precedence(expression[i])) {
-                TreeNode* op = new TreeNode(operators.top());
+                char a = operators.top();
+                string str;
+                str += a;
+                Node* op = new Node(str);
                 operators.pop();
 
                 op->right = operands.top();
@@ -55,7 +83,10 @@ TreeNode* buildTree(string expression) {
         }
         else if (expression[i] == ')') {
             while (!operators.empty() && operators.top() != '(') {
-                TreeNode* op = new TreeNode(operators.top());
+                char a = operators.top();
+                string str;
+                str += a;
+                Node* op = new Node(str);
                 operators.pop();
 
                 op->right = operands.top();
@@ -70,7 +101,10 @@ TreeNode* buildTree(string expression) {
     }
 
     while (!operators.empty()) {
-        TreeNode* op = new TreeNode(operators.top());
+        char a = operators.top();
+        string str;
+        str += a;
+        Node* op = new Node(str);
         operators.pop();
 
         op->right = operands.top();
@@ -84,21 +118,19 @@ TreeNode* buildTree(string expression) {
     return operands.top();
 }
 
-int evaluate_tree(TreeNode* root) {
+int evaluate_tree(Node* root) {
     if (!root) return 0;
-    if (!root->left && !root->right) return root->val - '0';
+    if (!root->left && !root->right) return stoi(root->value);
     int left = evaluate_tree(root->left);
     int right = evaluate_tree(root->right);
-    if (root->val == '+') return left + right;
-    if (root->val == '-') return left - right;
-    if (root->val == '*') return left * right;
+    if (root->value == "+") return left + right;
+    if (root->value == "-") return left - right;
+    if (root->value == "*") return left * right;
     return left / right;
 }
 
 // Определение типа функтора для инструкций
 using Instruction = function<void(vector<string>)>;
-
-map<string, string> variable_map;
 
 // Функция для разбора строки на отдельные слова (токены), (лексический анализатор)
 vector<string> split1(const string& str, char delimiter) {
@@ -109,14 +141,6 @@ vector<string> split1(const string& str, char delimiter) {
         tokens.push_back(token);
     }
     return tokens;
-}
-
-//функция для замены имени переменной на ее значение, если такая переменная существует
-int variableCheck(string token) {
-    if (variable_map.count(token)) {
-        token = variable_map[token];
-    }
-    return stoi(token);
 }
 
 //вычисления операции
