@@ -33,6 +33,7 @@ int variableCheck(string token) {
     return stoi(token);
 }
 
+//определение приоритета
 int precedence(char op) {
     if (op == '+' || op == '-')
         return 1;
@@ -41,6 +42,7 @@ int precedence(char op) {
     return 0;
 }
 
+//вычисления операции
 int applyOp(int a, int b, char op) {
     switch (op) {
     case '+': return a + b;
@@ -48,10 +50,10 @@ int applyOp(int a, int b, char op) {
     case '*': return a * b;
     case '/': return a / b;
     }
-    // Return 0 for any unexpected operator character
     return 0;
 }
 
+//вычисление арифметического выражения
 int evaluate(std::string tokens) {
     int i;
     std::stack<int> values;
