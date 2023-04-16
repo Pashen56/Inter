@@ -6,17 +6,52 @@
 #include <fstream>
 #include <string>
 #include <stack>
+#include <unordered_map>
+
 
 using namespace std;
-map<string, string> variable_map;
+//map<string, string> variable_map;
 
-//функция для замены имени переменной на ее значение, если такая переменная существует
-int variableCheck(string token) {
-    if (variable_map.count(token)) {
-        token = variable_map[token];
+// Хэш-функция для строковых ключей
+struct StringHash {
+    size_t operator()(const string& str) const {
+        return hash<string>()(str);
     }
-    return stoi(token);
+};
+
+// Класс для хранения переменных
+class VariableMap {
+private:
+    unordered_map<string, string, StringHash> variable_map;
+
+public:
+    // Добавление переменной в карту
+    void addVariable(const string& name, const string& value) {
+        variable_map[name] = value;
+    }
+
+    // Получение значения переменной по имени
+    string& getVariable(const string& name) {
+        return variable_map[name];
+    }
+
+    // Проверка наличия переменной в карте
+    bool hasVariable(const string& name) {
+        return variable_map.count(name) > 0;
+    }
+};
+
+// Функция для проверки наличия переменной и получения ее значения
+string& variableCheck(VariableMap& var_map, string& name) {
+    if (!var_map.hasVariable(name)) {
+        return name;
+    }
+    return var_map.getVariable(name);
 }
+
+VariableMap variable_map;
+
+
 
 bool isOperator(char c) {
     return (c == '+' || c == '-' || c == '*' || c == '/');
@@ -62,7 +97,7 @@ Node* buildTree(string expression) {
                 i++;
             }
             i--;
-            operands.push(new Node(to_string(variableCheck(var))));
+            operands.push(new Node(variableCheck(variable_map, var)));
         }
         else if (isOperator(expression[i])) {
             while (!operators.empty() && precedence(operators.top()) >= precedence(expression[i])) {
@@ -188,7 +223,7 @@ int evaluate(std::string tokens) {
                 i++;
             }
 
-            values.push(variableCheck(var));
+            values.push(stoi(variableCheck(variable_map, var)));
             i--;
         }
 
@@ -263,7 +298,7 @@ int main() {
             cerr << "ERROR: Неверное количество аргументов для инструкции in" << endl;
             return;
         }
-        variable_map[tokens[0]] = tokens[1];
+        variable_map.addVariable(tokens[0], tokens[1]);
     };
 
     instruction_map["out"] = [](vector<string> tokens) {
@@ -271,7 +306,7 @@ int main() {
             cerr << "ERROR: Неверное количество аргументов для инструкции out" << endl;
             return;
         }
-        cout << tokens[0] << " = " << variableCheck(tokens[0]) << endl;
+        cout << tokens[0] << " = " << variableCheck(variable_map, tokens[0]) << endl;
     };
 
     instruction_map["add"] = [](vector<string> tokens) {
@@ -280,11 +315,11 @@ int main() {
             return;
         }
         if (tokens.size() == 2) {
-            cout << tokens[0] << " + " << tokens[1] << " = " << variableCheck(tokens[0]) + variableCheck(tokens[1]) << endl;
+            cout << tokens[0] << " + " << tokens[1] << " = " << stoi(variableCheck(variable_map, tokens[0])) + stoi(variableCheck(variable_map, tokens[1])) << endl;
         }
         else {
-            variable_map[tokens[0]] = to_string(variableCheck(tokens[1]) + variableCheck(tokens[2]));
-            cout << tokens[0] << " = " << tokens[1] << " + " << tokens[2] << " = " << variableCheck(tokens[1]) << " + " << variableCheck(tokens[2]) << " = " << variableCheck(tokens[1]) + variableCheck(tokens[2]) << endl;
+            variable_map.addVariable(tokens[0], to_string(stoi(variableCheck(variable_map, tokens[1])) + stoi(variableCheck(variable_map, tokens[2]))));
+            cout << tokens[0] << " = " << tokens[1] << " + " << tokens[2] << " = " << variableCheck(variable_map, tokens[1]) << " + " << variableCheck(variable_map, tokens[2]) << " = " << stoi(variableCheck(variable_map, tokens[1])) + stoi(variableCheck(variable_map, tokens[2])) << endl;
         }
     };
 
@@ -294,11 +329,11 @@ int main() {
             return;
         }
         if (tokens.size() == 2) {
-            cout << tokens[0] << " - " << tokens[1] << " = " << variableCheck(tokens[0]) - variableCheck(tokens[1]) << endl;
+            cout << tokens[0] << " - " << tokens[1] << " = " << stoi(variableCheck(variable_map, tokens[0])) - stoi(variableCheck(variable_map, tokens[1])) << endl;
         }
         else {
-            variable_map[tokens[0]] = to_string(variableCheck(tokens[1]) - variableCheck(tokens[2]));
-            cout << tokens[0] << " = " << tokens[1] << " - " << tokens[2] << " = " << variableCheck(tokens[1]) << " - " << variableCheck(tokens[2]) << " = " << variableCheck(tokens[1]) - variableCheck(tokens[2]) << endl;
+            variable_map.addVariable(tokens[0], to_string(stoi(variableCheck(variable_map, tokens[1])) - stoi(variableCheck(variable_map, tokens[2]))));
+            cout << tokens[0] << " = " << tokens[1] << " - " << tokens[2] << " = " << variableCheck(variable_map, tokens[1]) << " - " << variableCheck(variable_map, tokens[2]) << " = " << stoi(variableCheck(variable_map, tokens[1])) - stoi(variableCheck(variable_map, tokens[2])) << endl;
         }
     };
 
@@ -308,11 +343,11 @@ int main() {
             return;
         }
         if (tokens.size() == 2) {
-            cout << tokens[0] << " * " << tokens[1] << " = " << variableCheck(tokens[0]) * variableCheck(tokens[1]) << endl;
+            cout << tokens[0] << " * " << tokens[1] << " = " << stoi(variableCheck(variable_map, tokens[0])) * stoi(variableCheck(variable_map, tokens[1])) << endl;
         }
         else {
-            variable_map[tokens[0]] = to_string(variableCheck(tokens[1]) * variableCheck(tokens[2]));
-            cout << tokens[0] << " = " << tokens[1] << " * " << tokens[2] << " = " << variableCheck(tokens[1]) << " * " << variableCheck(tokens[2]) << " = " << variableCheck(tokens[1]) * variableCheck(tokens[2]) << endl;
+            variable_map.addVariable(tokens[0], to_string(stoi(variableCheck(variable_map, tokens[1])) * stoi(variableCheck(variable_map, tokens[2]))));
+            cout << tokens[0] << " = " << tokens[1] << " * " << tokens[2] << " = " << variableCheck(variable_map, tokens[1]) << " * " << variableCheck(variable_map, tokens[2]) << " = " << stoi(variableCheck(variable_map, tokens[1])) * stoi(variableCheck(variable_map, tokens[2])) << endl;
         }
     };
 
@@ -322,19 +357,19 @@ int main() {
             return;
         }
         if (tokens.size() == 2) {
-            if (variableCheck(tokens[1]) == 0) {
+            if (stoi(variableCheck(variable_map, tokens[1])) == 0) {
                 cerr << "Ошибка: Деление на ноль" << endl;
                 return;
             }
-            cout << tokens[0] << " / " << tokens[1] << " = " << variableCheck(tokens[0]) / variableCheck(tokens[1]) << endl;
+            cout << tokens[0] << " / " << tokens[1] << " = " << stoi(variableCheck(variable_map, tokens[0])) / stoi(variableCheck(variable_map, tokens[1])) << endl;
         }
         else {
-            if (variableCheck(tokens[2]) == 0) {
+            if (stoi(variableCheck(variable_map, tokens[2])) == 0) {
                 cerr << "Ошибка: Деление на ноль" << endl;
                 return;
             }
-            variable_map[tokens[0]] = to_string(variableCheck(tokens[1]) / variableCheck(tokens[2]));
-            cout << tokens[0] << " = " << tokens[1] << " / " << tokens[2] << " = " << variableCheck(tokens[1]) << " / " << variableCheck(tokens[2]) << " = " << variableCheck(tokens[1]) / variableCheck(tokens[2]) << endl;
+            variable_map.addVariable(tokens[0], to_string(stoi(variableCheck(variable_map, tokens[1])) / stoi(variableCheck(variable_map, tokens[2]))));
+            cout << tokens[0] << " = " << tokens[1] << " / " << tokens[2] << " = " << variableCheck(variable_map, tokens[1]) << " / " << variableCheck(variable_map, tokens[2]) << " = " << stoi(variableCheck(variable_map, tokens[1])) / stoi(variableCheck(variable_map, tokens[2])) << endl;
         }
     };
 
@@ -343,7 +378,7 @@ int main() {
             cerr << "Ошибка: Неверное количество аргументов для инструкции and" << endl;
             return;
         }
-        int result = variableCheck(tokens[0]) & variableCheck(tokens[1]);
+        int result = stoi(variableCheck(variable_map, tokens[0])) & stoi(variableCheck(variable_map, tokens[1]));
         cout << tokens[0] << " & " << tokens[1] << " = " << result << endl;
     };
 
@@ -352,7 +387,7 @@ int main() {
             cerr << "Ошибка: Неверное количество аргументов для инструкции or" << endl;
             return;
         }
-        int result = variableCheck(tokens[0]) | variableCheck(tokens[1]);
+        int result = stoi(variableCheck(variable_map, tokens[0])) | stoi(variableCheck(variable_map, tokens[1]));
         cout << tokens[0] << " | " << tokens[1] << " = " << result << endl;
     };
 
@@ -361,7 +396,7 @@ int main() {
             cerr << "Ошибка: Неверное количество аргументов для инструкции xor" << endl;
             return;
         }
-        int result = variableCheck(tokens[0]) ^ variableCheck(tokens[1]);
+        int result = stoi(variableCheck(variable_map, tokens[0])) ^ stoi(variableCheck(variable_map, tokens[1]));
         cout << tokens[0] << " ^ " << tokens[1] << " = " << result << endl;
     };
 
@@ -370,7 +405,7 @@ int main() {
             cerr << "Ошибка: Неверное количество аргументов для инструкции jmp" << endl;
             return;
         }
-        cout << "Выполнена инструкция jmp к инструкции #" << variableCheck(tokens[0]) << endl;
+        cout << "Выполнена инструкция jmp к инструкции #" << variableCheck(variable_map, tokens[0]) << endl;
         // Перейти к указанной инструкции
         // Например:
         // instruction_pointer = target;
@@ -381,7 +416,7 @@ int main() {
             cerr << "Ошибка: Неверное количество аргументов для инструкции not" << endl;
             return;
         }
-        int result = ~variableCheck(tokens[0]);
+        int result = ~(stoi(variableCheck(variable_map, tokens[0])));
         cout << "NOT " << tokens[0] << " = " << result << endl;
     };
 
@@ -390,7 +425,7 @@ int main() {
             cerr << "ERROR: Неверное количество аргументов для инструкции mov" << endl;
             return;
         }
-        variable_map[tokens[0]] = to_string(variableCheck(tokens[1]));
+        variable_map.addVariable(tokens[0], variableCheck(variable_map, tokens[1]));
     };
 
     instruction_map["inc"] = [](vector<string> tokens) {
@@ -398,7 +433,7 @@ int main() {
             cerr << "Ошибка: Неверное количество аргументов для инструкции inc" << endl;
             return;
         }
-        int result = variableCheck(tokens[0]);
+        int result = stoi(variableCheck(variable_map, tokens[0]));
         cout << "Increment " << tokens[0] << " = " << ++result << endl;
     };
 
@@ -407,7 +442,7 @@ int main() {
             cerr << "Ошибка: Неверное количество аргументов для инструкции dec" << endl;
             return;
         }
-        int result = variableCheck(tokens[0]);
+        int result = stoi(variableCheck(variable_map, tokens[0]));
         cout << "Decrement " << tokens[0] << " = " << --result << endl;
     };
 
@@ -475,7 +510,7 @@ int main() {
             string expression = str.substr(str.find('=') + 1);
             int result = evaluate_tree(buildTree(expression));
             cout << "buildTree: " << result << endl;
-            variable_map[var] = to_string(evaluate(expression));
+            variable_map.addVariable(var, to_string(evaluate(expression)));
         }
 
     }
