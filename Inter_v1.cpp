@@ -8,56 +8,64 @@
 #include <stack>
 #include <unordered_map>
 
-
 using namespace std;
-//map<string, string> variable_map;
-
-// Хэш-функция для строковых ключей
-struct StringHash {
-    size_t operator()(const string& str) const {
-        return hash<string>()(str);
-    }
-};
 
 // Класс для хранения переменных
 class VariableMap {
 private:
-    unordered_map<string, string, StringHash> variable_map;
+    vector<map<string, string>> scopes;
 
 public:
     // Добавление переменной в карту
     void addVariable(const string& name, const string& value) {
-        variable_map[name] = value;
+        if (scopes.empty()) {
+            scopes.push_back(map<string, string>());
+        }
+        scopes.back()[name] = value;
     }
 
     // Получение значения переменной по имени
-    string& getVariable(const string& name) {
-        return variable_map[name];
+    string& getVariable(string& name) {
+        for (auto it = scopes.rbegin(); it != scopes.rend(); ++it) {
+            auto jt = it->find(name);
+            if (jt != it->end()) {
+                return jt->second;
+            }
+        }
+        return name;
+    }
+    
+    bool checkVariable(string& name) {
+        for (auto it = scopes.rbegin(); it != scopes.rend(); ++it) {
+            auto jt = it->find(name);
+            if (jt != it->end()) {
+                return true;
+            }
+        }
+        return false;
     }
 
-    // Проверка наличия переменной в карте
-    bool hasVariable(const string& name) {
-        return variable_map.count(name) > 0;
+    void pushScope() {
+        scopes.push_back(map<string, string>());
+    }
+    void popScope() {
+        scopes.pop_back();
     }
 };
 
 // Функция для проверки наличия переменной и получения ее значения
 string& variableCheck(VariableMap& var_map, string& name) {
-    if (!var_map.hasVariable(name)) {
-        return name;
-    }
     return var_map.getVariable(name);
 }
 
 VariableMap variable_map;
 
-
-
+// Проверка на принадлежность к операторам
 bool isOperator(char c) {
     return (c == '+' || c == '-' || c == '*' || c == '/');
 }
 
-//определение приоритета
+// Определение приоритета
 int precedence(char op) {
     if (op == '+' || op == '-')
         return 1;
@@ -66,6 +74,7 @@ int precedence(char op) {
     return 0;
 }
 
+// Структура дерева
 struct Node {
     string value;
     Node* left;
@@ -73,6 +82,7 @@ struct Node {
     Node(string x) : value(x), left(NULL), right(NULL) {}
 };
 
+// Построение дерева
 Node* buildTree(string expression) {
     stack<Node*> operands;
     stack<char> operators;
@@ -153,6 +163,7 @@ Node* buildTree(string expression) {
     return operands.top();
 }
 
+// Подсчет значения построенного дерева
 int evaluate_tree(Node* root) {
     if (!root) return 0;
     if (!root->left && !root->right) return stoi(root->value);
@@ -178,7 +189,7 @@ vector<string> split1(const string& str, char delimiter) {
     return tokens;
 }
 
-//вычисления операции
+// Вычисления операции
 int applyOp(int a, int b, char op) {
     switch (op) {
     case '+': return a + b;
@@ -189,7 +200,7 @@ int applyOp(int a, int b, char op) {
     return 0;
 }
 
-//вычисление арифметического выражения
+// Вычисление арифметического выражения
 int evaluate(std::string tokens) {
     int i;
     std::stack<int> values;
@@ -302,11 +313,16 @@ int main() {
     };
 
     instruction_map["out"] = [](vector<string> tokens) {
-        if (tokens.size() != 1) {
-            cerr << "ERROR: Неверное количество аргументов для инструкции out" << endl;
-            return;
-        }
-        cout << tokens[0] << " = " << variableCheck(variable_map, tokens[0]) << endl;
+            if (tokens.size() != 1) {
+                cerr << "ERROR: Неверное количество аргументов для инструкции out" << endl;
+                return;
+            }
+            if (variable_map.checkVariable(tokens[0])) {
+                cout << tokens[0] << " = " << variableCheck(variable_map, tokens[0]) << endl;
+            }
+            else {
+                cout << "Переменной " << tokens[0] << " не существует!" << endl;
+            }
     };
 
     instruction_map["add"] = [](vector<string> tokens) {
@@ -448,32 +464,32 @@ int main() {
 
     ifstream input1("input.txt");
     ofstream output1("output.txt");
-    bool in_comment = false; // флаг для отслеживания начала и конца многострочного комментария
+    bool in_comment = false; // Флаг для отслеживания начала и конца многострочного комментария
     string line;
-    while (getline(input1, line)) { // читаем файл построчно
+    while (getline(input1, line)) { // Читаем файл построчно
         string result_line;
-        for (int i = 0; i < line.length(); i++) { // проходим по каждому символу в строке
+        for (int i = 0; i < line.length(); i++) { // Проходим по каждому символу в строке
             if (!in_comment && line[i] == '/' && i < line.length() - 1 && line[i + 1] == '/') {
-                // начало однострочного комментария - игнорируем остаток строки
+                // Начало однострочного комментария - игнорируем остаток строки
                 break;
             }
             else if (!in_comment && line[i] == '/' && i < line.length() - 1 && line[i + 1] == '*') {
-                // начало многострочного комментария - игнорируем остаток строки
+                // Начало многострочного комментария - игнорируем остаток строки
                 in_comment = true;
                 i++;
             }
             else if (in_comment && line[i] == '*' && i < line.length() - 1 && line[i + 1] == '/') {
-                // конец многострочного комментария
+                // Конец многострочного комментария
                 in_comment = false;
                 i++;
             }
             else if (!in_comment) {
-                // символ не является частью комментария - добавляем его к результату
+                // Символ не является частью комментария - добавляем его к результату
                 result_line += line[i];
             }
         }
         if ((result_line != "") && (result_line != " ")) {
-            output1 << result_line << endl; // записываем строку без комментариев в выходной файл
+            output1 << result_line << endl; // Записываем строку без комментариев в выходной файл
         }
     }
     input1.close();
@@ -484,7 +500,15 @@ int main() {
     string str, variable;
     int i = 0;
     while (getline(input2, str)) {
-        if (str.find('=') == string::npos) {
+        // Условия на нахождения в файле фигурных скобок
+        if (str.find('{') != string::npos) {
+            variable_map.pushScope();
+        }
+        else if (str.find('}') != string::npos) {
+            variable_map.popScope();
+        }
+        else if (str.find('=') == string::npos) {
+            for (; !isalnum(str[i]); i++) {}
             for (; str[i] != ' '; i++) {}
             str[i] = ',';
             str[str.find(';')] = ' ';
@@ -503,7 +527,7 @@ int main() {
             // Выполнение инструкции
             instruction_map[tokens[0]](vector<string>(tokens.begin() + 1, tokens.end()));
         }
-        else {
+        else if (str.find('=')) {
             str[str.find(';')] = ' ';
             str.erase(remove(str.begin(), str.end(), ' '), str.end());
             string var = str.substr(0, str.find('='));
@@ -512,8 +536,8 @@ int main() {
             cout << "buildTree: " << result << endl;
             variable_map.addVariable(var, to_string(evaluate(expression)));
         }
-
     }
+    
     input2.close();
     return 0;
 }
